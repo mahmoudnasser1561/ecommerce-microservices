@@ -2,25 +2,19 @@ import json
 import os
 import threading
 import time
-from typing import List, Dict
 
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
-from prometheus_client import (
-    Counter,
-    Gauge,
-    Histogram,
-    generate_latest,
-    CONTENT_TYPE_LATEST,
-)
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
 app = Flask(__name__)
 CORS(app)
 
+# Persistence (volume-backed)
 DATA_FILE = os.environ.get("INVENTORY_DATA_FILE", "/data/inventory.json")
 _lock = threading.Lock()
 
-DEFAULT_INVENTORY: List[Dict] = [
+DEFAULT_INVENTORY = [
     {"id": 1, "quantity": 100},
     {"id": 2, "quantity": 50},
     {"id": 3, "quantity": 75},
@@ -35,39 +29,38 @@ DEFAULT_INVENTORY: List[Dict] = [
     {"id": 12, "quantity": 55},
 ]
 
-def _ensure_parent_dir(path: str) -> None:
-    parent = os.path.dirname(path)
-    if parent:
-        os.makedirs(parent, exist_ok=True)
+def _ensure_dir(path: str) -> None:
+    d = os.path.dirname(path)
+    if d:
+        os.makedirs(d, exist_ok=True)
 
-def _atomic_write_json(path: str, data) -> None:
-    _ensure_parent_dir(path)
+def _atomic_write(path: str, data) -> None:
+    _ensure_dir(path)
     tmp = f"{path}.tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f)
     os.replace(tmp, path)
 
-def load_inventory() -> List[Dict]:
+def load_inventory():
     with _lock:
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            if isinstance(data, list) and all("id" in x and "quantity" in x for x in data):
+            if isinstance(data, list):
                 return data
         except FileNotFoundError:
             pass
         except Exception:
             pass
 
-        _atomic_write_json(DATA_FILE, DEFAULT_INVENTORY)
+        _atomic_write(DATA_FILE, DEFAULT_INVENTORY)
         return list(DEFAULT_INVENTORY)
 
-def save_inventory(data: List[Dict]) -> None:
+def save_inventory(data):
     with _lock:
-        _atomic_write_json(DATA_FILE, data)
+        _atomic_write(DATA_FILE, data)
 
 inventory = load_inventory()
-
 
 # Prometheus metrics
 REQUESTS_TOTAL = Counter(
@@ -89,18 +82,18 @@ INVENTORY_QTY = Gauge(
     ["product_id"],
 )
 
-def _update_inventory_gauges() -> None:
+def refresh_gauges():
     for item in inventory:
         INVENTORY_QTY.labels(product_id=str(item["id"])).set(item["quantity"])
 
-_update_inventory_gauges()
+refresh_gauges()
 
 @app.before_request
-def _metrics_start_timer():
+def _start_timer():
     request._start_time = time.time()
 
 @app.after_request
-def _metrics_after_request(response):
+def _record_metrics(response):
     route = request.url_rule.rule if request.url_rule else request.path
     elapsed = time.time() - getattr(request, "_start_time", time.time())
 
@@ -110,11 +103,7 @@ def _metrics_after_request(response):
         status_code=str(response.status_code),
     ).inc()
 
-    REQUEST_LATENCY.labels(
-        method=request.method,
-        route=route,
-    ).observe(elapsed)
-
+    REQUEST_LATENCY.labels(method=request.method, route=route).observe(elapsed)
     return response
 
 @app.get("/metrics")
@@ -124,7 +113,6 @@ def metrics():
 @app.get("/healthz")
 def healthz():
     return jsonify({"status": "ok"}), 200
-
 
 # API
 @app.route("/api/inventory", methods=["GET"])
@@ -146,7 +134,7 @@ def order_product(product_id):
         save_inventory(inventory)
         INVENTORY_QTY.labels(product_id=str(product_id)).set(product["quantity"])
         return jsonify(product)
-    elif product and product["quantity"] <= 0:
+    if product and product["quantity"] <= 0:
         return jsonify({"error": "Product is out of stock"}), 400
     return jsonify({"error": "Product not found"}), 404
 

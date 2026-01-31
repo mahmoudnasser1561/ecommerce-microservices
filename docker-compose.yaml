@@ -58,7 +58,7 @@ services:
     restart: unless-stopped
 
   contact-support-team:
-    image: mahmoudnasser8080/contact-support-team
+    image: mahmoudnasser8080/contact-support-team:metrics-v1
     container_name: contact-support-team
     ports:
       - "8000:8000"

@@ -1,8 +1,60 @@
-from flask import Flask, jsonify, request
+import time
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
+from prometheus_client import (
+    Counter,
+    Histogram,
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+)
 
 app = Flask(__name__)
 CORS(app)
+
+# ---- Prometheus metrics ----
+REQUESTS_TOTAL = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "route", "status_code"],
+)
+
+REQUEST_LATENCY = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request latency in seconds",
+    ["method", "route"],
+    buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5),
+)
+
+@app.before_request
+def _start_timer():
+    request._start_time = time.time()
+
+@app.after_request
+def _record_metrics(response):
+    route = request.path
+    elapsed = time.time() - getattr(request, "_start_time", time.time())
+
+    REQUESTS_TOTAL.labels(
+        method=request.method,
+        route=route,
+        status_code=str(response.status_code),
+    ).inc()
+
+    REQUEST_LATENCY.labels(
+        method=request.method,
+        route=route,
+    ).observe(elapsed)
+
+    return response
+
+@app.get("/metrics")
+def metrics():
+    return Response(generate_latest(), mimetype=CONTENT_TYPE_LATEST)
+
+@app.get("/healthz")
+def healthz():
+    return jsonify({"status": "ok"}), 200
+# ----------------------------
 
 @app.route('/api/contact-message', methods=['GET'])
 def get_contact_message():

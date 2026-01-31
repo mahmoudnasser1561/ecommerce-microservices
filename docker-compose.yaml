@@ -26,10 +26,16 @@ services:
       - "3003:3003"
 
   product-inventory:
-    image: mahmoudnasser8080/product-inventory
-    container_name: product-ineventory
+    image: mahmoudnasser8080/product-inventory:metrics-v1
+    container_name: product-inventory
     ports:
       - "3002:3002"
+    environment:
+      - INVENTORY_DATA_FILE=/data/inventory.json
+    volumes:
+      - product_inventory_data:/data
+    restart: unless-stopped
+
 
   shipping-and-handling:
     image: mahmoudnasser8080/shipping-and-handling
@@ -58,6 +64,24 @@ services:
      - PRODUCT_INVENTORY_API_HOST=http://product-inventory 
      - PRODUCT_CATALOG_API_HOST=http://product-catalog
      - SHIPPING_HANDLING_API_HOST=http://shipping-and-handling
+
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    container_name: prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    restart: unless-stopped
+
+
+volumes:
+  product_inventory_data:
+  prometheus_data:
 
 
 

@@ -7,3 +7,7 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ["product-inventory:3002"]
+
+  - job_name: "product-catalog"
+    static_configs:
+      - targets: ["product-catalog:3001"]

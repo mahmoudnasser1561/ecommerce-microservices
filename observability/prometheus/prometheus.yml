@@ -11,3 +11,7 @@ scrape_configs:
   - job_name: "product-catalog"
     static_configs:
       - targets: ["product-catalog:3001"]
+
+  - job_name: "profile-management"
+    static_configs:
+      - targets: ["profile-management:3003"]

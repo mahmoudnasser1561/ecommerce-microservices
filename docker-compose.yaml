@@ -1,4 +1,3 @@
-version: "V3"
 services:
   ecommerce-ui:
     image: mahmoudnasser8080/ecommerce-ui
@@ -7,23 +6,29 @@ services:
       - "4000:4000"
     environment:
       - REACT_APP_PROFILE_API_HOST=http://profile-management
-      - REACT_APP_PRODUCT_API_HOST=http://product-catalog  
-      - REACT_APP_INVENTORY_API_HOST=http://product-inventory  
-      - REACT_APP_ORDER_API_HOST=http://order-management 
+      - REACT_APP_PRODUCT_API_HOST=http://product-catalog
+      - REACT_APP_INVENTORY_API_HOST=http://product-inventory
+      - REACT_APP_ORDER_API_HOST=http://order-management
       - REACT_APP_SHIPPING_API_HOST=http://shipping-and-handling
-      - REACT_APP_CONTACT_API_HOST=http://contact-support-team 
+      - REACT_APP_CONTACT_API_HOST=http://contact-support-team
     depends_on:
       - profile-management
-      - product-catalog  
-      - product-inventory  
-      - order-management 
+      - product-catalog
+      - product-inventory
+      - order-management
       - shipping-and-handling
       - contact-support-team
+    restart: unless-stopped
+
   profile-management:
-    image: mahmoudnasser8080/profile-management
+    image: mahmoudnasser8080/profile-management:metrics-v1
     container_name: profile-management
     ports:
       - "3003:3003"
+    environment:
+      - PORT=3003
+    restart: unless-stopped
+
 
   product-inventory:
     image: mahmoudnasser8080/product-inventory:metrics-v1
@@ -36,34 +41,39 @@ services:
       - product_inventory_data:/data
     restart: unless-stopped
 
-
   shipping-and-handling:
     image: mahmoudnasser8080/shipping-and-handling
     container_name: shipping-and-handling
     ports:
       - "8080:8080"
+    restart: unless-stopped
 
   product-catalog:
-    image: mahmoudnasser8080/product-catalog
+    image: mahmoudnasser8080/product-catalog:metrics-v1
     container_name: product-catalog
     ports:
       - "3001:3001"
-      
+    environment:
+      - PORT=3001
+    restart: unless-stopped
+
   contact-support-team:
     image: mahmoudnasser8080/contact-support-team
     container_name: contact-support-team
     ports:
       - "8000:8000"
+    restart: unless-stopped
 
   order-management:
     image: mahmoudnasser8080/order-management
     container_name: order-management
     ports:
-      - "9090:9090"
+      - "9092:9090"
     environment:
-     - PRODUCT_INVENTORY_API_HOST=http://product-inventory 
-     - PRODUCT_CATALOG_API_HOST=http://product-catalog
-     - SHIPPING_HANDLING_API_HOST=http://shipping-and-handling
+      - PRODUCT_INVENTORY_API_HOST=http://product-inventory
+      - PRODUCT_CATALOG_API_HOST=http://product-catalog
+      - SHIPPING_HANDLING_API_HOST=http://shipping-and-handling
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:v3.9.1
@@ -78,10 +88,10 @@ services:
       - "--storage.tsdb.path=/prometheus"
     restart: unless-stopped
 
-
 volumes:
   product_inventory_data:
   prometheus_data:
+
 
 
 

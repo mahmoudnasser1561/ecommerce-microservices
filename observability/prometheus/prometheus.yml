@@ -19,3 +19,7 @@ scrape_configs:
   - job_name: "contact-support-team"
     static_configs:
       - targets: ["contact-support-team:8000"]
+
+  - job_name: "shipping-and-handling"
+    static_configs:
+      - targets: ["shipping-and-handling:8080"]

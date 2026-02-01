@@ -49,7 +49,7 @@ services:
     restart: unless-stopped
 
   product-catalog:
-    image: mahmoudnasser8080/product-catalog:metrics-v1
+    image: mahmoudnasser8080/product-catalog:metrics-v3
     container_name: product-catalog
     ports:
       - "3001:3001"

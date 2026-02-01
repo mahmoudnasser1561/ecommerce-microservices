@@ -14,12 +14,10 @@ import (
 
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Set CORS headers
-		w.Header().Set("Access-Control-Allow-Origin", "*") // should be specific domain in production
+		w.Header().Set("Access-Control-Allow-Origin", "*") // be specific domain in production
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
-		// Pre-flight request
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -33,30 +31,78 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 var (
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "http_requests_total",
-			Help: "Total HTTP requests",
+			Name: "shipping_and_handling_http_requests_total",
+			Help: "Total number of HTTP requests",
 		},
 		[]string{"method", "route", "status_code"},
 	)
 
 	httpRequestDurationSeconds = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
+			Name:    "shipping_and_handling_http_request_duration_seconds",
 			Help:    "HTTP request duration in seconds",
-			Buckets: []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5},
+			Buckets: []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
 		},
 		[]string{"method", "route", "status_code"},
+	)
+
+	httpRequestsInFlight = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "shipping_and_handling_http_requests_in_flight",
+			Help: "Number of HTTP requests currently being handled",
+		},
+	)
+
+	httpResponseSizeBytes = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "shipping_and_handling_http_response_size_bytes",
+			Help:    "HTTP response size in bytes",
+			Buckets: []float64{200, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000},
+		},
+		[]string{"method", "route", "status_code"},
+	)
+
+	feeCalculationsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "shipping_and_handling_fee_calculations_total",
+			Help: "Total number of shipping fee calculations performed",
+		},
+		[]string{"endpoint", "category"},
+	)
+
+	feeAmount = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "shipping_and_handling_fee_amount",
+			Help:    "Computed shipping fee amounts",
+			Buckets: []float64{0, 2, 5, 10, 15, 20, 30, 50, 100},
+		},
+		[]string{"endpoint", "category"},
+	)
+
+	productNotFoundTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "shipping_and_handling_product_not_found_total",
+			Help: "Number of times a product lookup failed (product not found)",
+		},
 	)
 )
 
 func init() {
 	prometheus.MustRegister(httpRequestsTotal)
 	prometheus.MustRegister(httpRequestDurationSeconds)
+	prometheus.MustRegister(httpRequestsInFlight)
+	prometheus.MustRegister(httpResponseSizeBytes)
+
+	prometheus.MustRegister(feeCalculationsTotal)
+	prometheus.MustRegister(feeAmount)
+	prometheus.MustRegister(productNotFoundTotal)
 }
 
+// status + bytes recorder
 type statusRecorder struct {
 	http.ResponseWriter
 	statusCode int
+	bytes      int
 }
 
 func (sr *statusRecorder) WriteHeader(code int) {
@@ -64,26 +110,41 @@ func (sr *statusRecorder) WriteHeader(code int) {
 	sr.ResponseWriter.WriteHeader(code)
 }
 
-// Wrap handlers so route labels don’t explode (we pass a fixed route string)
+func (sr *statusRecorder) Write(b []byte) (int, error) {
+	n, err := sr.ResponseWriter.Write(b)
+	sr.bytes += n
+	return n, err
+}
+
 func instrument(route string, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/metrics" {
+			h(w, r)
+			return
+		}
+
+		httpRequestsInFlight.Inc()
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, statusCode: 200}
 
 		h(rec, r)
 
 		duration := time.Since(start).Seconds()
+		status := strconv.Itoa(rec.statusCode)
+
 		labels := prometheus.Labels{
 			"method":      r.Method,
 			"route":       route,
-			"status_code": strconv.Itoa(rec.statusCode),
+			"status_code": status,
 		}
 
 		httpRequestsTotal.With(labels).Inc()
 		httpRequestDurationSeconds.With(labels).Observe(duration)
+		httpResponseSizeBytes.With(labels).Observe(float64(rec.bytes))
+
+		httpRequestsInFlight.Dec()
 	}
 }
-
 
 // Product represents a product with an ID, name, description, price, and category.
 type Product struct {
@@ -112,13 +173,12 @@ var products = []Product{
 
 // calculateShippingFee calculates the shipping and handling fee based on the category of the product and time of day.
 func calculateShippingFee(category string) float64 {
-	baseFee := 5.0 // Base fee for shipping
+	baseFee := 5.0
 	var categoryMultiplier float64
 	timeOfDaySurcharge := 0.0
 	peakHoursStart := 14 // 2 PM
 	peakHoursEnd := 19   // 7 PM
 
-	// Determine the multiplier for the category
 	switch category {
 	case "Electronics":
 		categoryMultiplier = 2.0
@@ -134,19 +194,15 @@ func calculateShippingFee(category string) float64 {
 		categoryMultiplier = 1.0
 	}
 
-	// Get current hour to determine if it's peak hours
 	currentHour := time.Now().Hour()
-
-	// Check if it's peak hours
 	if currentHour >= peakHoursStart && currentHour <= peakHoursEnd {
-		timeOfDaySurcharge = 3.0 // Add surcharge for peak hours
+		timeOfDaySurcharge = 3.0
 	}
 
-	// Calculate the final fee
 	return baseFee*categoryMultiplier + timeOfDaySurcharge
 }
 
-// handleShippingFee responds to the request with the calculated shipping fee for a product by its ID.
+// handleShippingFee responds with the calculated shipping fee for a product by its ID.
 func handleShippingFee(w http.ResponseWriter, r *http.Request) {
 	productID := r.URL.Query().Get("product_id")
 	if productID == "" {
@@ -154,21 +210,25 @@ func handleShippingFee(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find product by ID
 	var product *Product
 	for i := range products {
 		if fmt.Sprintf("%d", products[i].ID) == productID {
-			product = &products[i] // IMPORTANT: take pointer to slice element (not loop copy)
+			product = &products[i]
 			break
 		}
 	}
 
 	if product == nil {
+		productNotFoundTotal.Inc()
 		http.Error(w, "Product not found", http.StatusNotFound)
 		return
 	}
 
 	shippingFee := calculateShippingFee(product.Category)
+
+	// business metrics
+	feeCalculationsTotal.WithLabelValues("/shipping-fee", product.Category).Inc()
+	feeAmount.WithLabelValues("/shipping-fee", product.Category).Observe(shippingFee)
 
 	response := struct {
 		ID          int     `json:"id"`
@@ -190,15 +250,13 @@ func handleShippingFee(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(response)
 }
 
-// handleShippingExplanation provides a JSON object with a sophisticated explanation of the shipping fee calculation.
+// handleShippingExplanation provides an explanation of shipping fee calculation.
 func handleShippingExplanation(w http.ResponseWriter, r *http.Request) {
 	explanation := map[string]string{
 		"explanation": "The shipping and handling fees are computed by employing a multi-tiered analytical framework. " +
 			"The base fee is dynamically adjusted in accordance with the product's categorical classification. " +
 			"This foundational fee is further compounded by a temporally variable surcharge applied during periods of " +
-			"high demand, denoted as peak hours, which span from 2 PM to 7 PM. This intricate calculus ensures that the " +
-			"fee structure robustly reflects both the logistical complexity inherent to the product's category and the " +
-			"fluctuating operational demands associated with peak transactional intervals.",
+			"high demand (peak hours from 2 PM to 7 PM).",
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -217,6 +275,11 @@ func handleAllShippingFees(w http.ResponseWriter, r *http.Request) {
 
 	for _, product := range products {
 		fee := calculateShippingFee(product.Category)
+
+		// business metrics
+		feeCalculationsTotal.WithLabelValues("/all-shipping-fees", product.Category).Inc()
+		feeAmount.WithLabelValues("/all-shipping-fees", product.Category).Observe(fee)
+
 		feeDetails = append(feeDetails, struct {
 			ProductID   int     `json:"product_id"`
 			ShippingFee float64 `json:"shipping_fee"`
@@ -245,12 +308,12 @@ func handleHealthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	// Existing routes (instrumented + CORS)
+	// Routes (instrumented + CORS)
 	http.HandleFunc("/shipping-fee", corsMiddleware(instrument("/shipping-fee", handleShippingFee)))
 	http.HandleFunc("/shipping-explanation", corsMiddleware(instrument("/shipping-explanation", handleShippingExplanation)))
 	http.HandleFunc("/all-shipping-fees", corsMiddleware(instrument("/all-shipping-fees", handleAllShippingFees)))
 
-	// Health + Metrics (no CORS needed, but harmless if you want it)
+	// Health + Metrics
 	http.HandleFunc("/healthz", instrument("/healthz", handleHealthz))
 	http.Handle("/metrics", promhttp.Handler())
 

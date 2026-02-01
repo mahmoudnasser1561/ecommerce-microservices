@@ -42,7 +42,7 @@ services:
     restart: unless-stopped
 
   shipping-and-handling:
-    image: mahmoudnasser8080/shipping-and-handling:metrics-v1
+    image: mahmoudnasser8080/shipping-and-handling:metrics-v2
     container_name: shipping-and-handling
     ports:
       - "8080:8080"

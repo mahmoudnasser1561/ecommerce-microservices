@@ -1,6 +1,6 @@
 services:
   ecommerce-ui:
-    image: mahmoudnasser8080/ecommerce-ui:metrics-v2
+    image: mahmoudnasser8080/ecommerce-ui:metrics-v3
     container_name: ecommerce-ui
     ports:
       - "4000:4000"

@@ -28,6 +28,15 @@ client.collectDefaultMetrics({
   prefix: "ecommerce_ui_",
 });
 
+// RPS + error rate
+const httpRequestsTotal = new client.Counter({
+  name: "ecommerce_ui_http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status_code"],
+});
+register.registerMetric(httpRequestsTotal);
+
+// Latency 
 const httpRequestDurationSeconds = new client.Histogram({
   name: "ecommerce_ui_http_request_duration_seconds",
   help: "HTTP request duration in seconds",
@@ -36,9 +45,50 @@ const httpRequestDurationSeconds = new client.Histogram({
 });
 register.registerMetric(httpRequestDurationSeconds);
 
-// record request durations (skip /metrics to reduce noise)
+// Concurrency
+const httpRequestsInFlight = new client.Gauge({
+  name: "ecommerce_ui_http_requests_in_flight",
+  help: "Number of HTTP requests currently being handled",
+});
+register.registerMetric(httpRequestsInFlight);
+
+// response size
+const httpResponseSizeBytes = new client.Histogram({
+  name: "ecommerce_ui_http_response_size_bytes",
+  help: "HTTP response size in bytes",
+  labelNames: ["method", "route", "status_code"],
+  buckets: [200, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000],
+});
+register.registerMetric(httpResponseSizeBytes);
+
+// record metrics 
 app.use((req, res, next) => {
   if (req.path === "/metrics") return next();
+
+  httpRequestsInFlight.inc();
+
+  // capture response bytes
+  let responseBytes = 0;
+  const originalWrite = res.write.bind(res);
+  const originalEnd = res.end.bind(res);
+
+  res.write = (chunk, encoding, cb) => {
+    if (chunk) {
+      responseBytes += Buffer.isBuffer(chunk)
+        ? chunk.length
+        : Buffer.byteLength(chunk, encoding);
+    }
+    return originalWrite(chunk, encoding, cb);
+  };
+
+  res.end = (chunk, encoding, cb) => {
+    if (chunk) {
+      responseBytes += Buffer.isBuffer(chunk)
+        ? chunk.length
+        : Buffer.byteLength(chunk, encoding);
+    }
+    return originalEnd(chunk, encoding, cb);
+  };
 
   const stopTimer = httpRequestDurationSeconds.startTimer({
     method: req.method,
@@ -47,16 +97,27 @@ app.use((req, res, next) => {
   });
 
   res.on("finish", () => {
-    // route template when available (e.g. "/products/:id")
     const route =
       (req.route && req.route.path) ||
       (req.baseUrl ? `${req.baseUrl}${req.path}` : req.path) ||
       "unknown";
 
-    stopTimer({
+    const labels = {
+      method: req.method,
       route,
       status_code: String(res.statusCode),
-    });
+    };
+
+    httpRequestsTotal.inc(labels);
+    httpResponseSizeBytes.observe(labels, responseBytes);
+    stopTimer(labels);
+    httpRequestsInFlight.dec();
+  });
+
+  res.on("close", () => {
+    try {
+      httpRequestsInFlight.dec();
+    } catch (_) {}
   });
 
   next();

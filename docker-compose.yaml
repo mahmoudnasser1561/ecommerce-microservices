@@ -1,6 +1,6 @@
 services:
   ecommerce-ui:
-    image: mahmoudnasser8080/ecommerce-ui
+    image: mahmoudnasser8080/ecommerce-ui:metrics-v2
     container_name: ecommerce-ui
     ports:
       - "4000:4000"
@@ -42,7 +42,7 @@ services:
     restart: unless-stopped
 
   shipping-and-handling:
-    image: mahmoudnasser8080/shipping-and-handling
+    image: mahmoudnasser8080/shipping-and-handling:metrics-v1
     container_name: shipping-and-handling
     ports:
       - "8080:8080"

@@ -31,7 +31,7 @@ services:
 
 
   product-inventory:
-    image: mahmoudnasser8080/product-inventory:metrics-v1
+    image: mahmoudnasser8080/product-inventory:metrics-v2
     container_name: product-inventory
     ports:
       - "3002:3002"

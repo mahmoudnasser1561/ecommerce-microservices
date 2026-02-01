@@ -1,19 +1,17 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "description": "Ecommerce UI server (Express) serving React build + API routes + Prometheus metrics",
+  "main": "server.js",
   "type": "module",
-
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
+    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "express": "^4.18.3",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "prom-client": "^15.1.3"
   }
 }

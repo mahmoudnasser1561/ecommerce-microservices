@@ -1,3 +1,3 @@
 # ecommerce-microservices
 
-<img width="2252" height="1082" alt="ecommerce drawio" src="https://github.com/user-attachments/assets/38768048-996c-44f5-b66e-b6c2ce120d73" />
+<img width="2251" height="1081" alt="ecommerce" src="https://github.com/user-attachments/assets/d6959b35-d2a3-48ef-95da-4e14040d948b" />

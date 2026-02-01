@@ -1,14 +1,11 @@
 {
   "name": "profile-management",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Profile management microservice (auth + profile) with Prometheus metrics",
+  "main": "auth_api.js",
   "scripts": {
     "start": "node auth_api.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",

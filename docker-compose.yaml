@@ -21,7 +21,7 @@ services:
     restart: unless-stopped
 
   profile-management:
-    image: mahmoudnasser8080/profile-management:metrics-v1
+    image: mahmoudnasser8080/profile-management:metrics-v2
     container_name: profile-management
     ports:
       - "3003:3003"

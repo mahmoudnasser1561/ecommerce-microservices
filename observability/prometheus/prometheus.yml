@@ -28,3 +28,7 @@ scrape_configs:
     static_configs:
       - targets: ["ecommerce-ui:4000"]
 
+  - job_name: "order-management"
+    static_configs:
+      - targets: ["order-management:9090"]
+

@@ -58,14 +58,14 @@ services:
     restart: unless-stopped
 
   contact-support-team:
-    image: mahmoudnasser8080/contact-support-team:metrics-v1
+    image: mahmoudnasser8080/contact-support-team:metrics-v4
     container_name: contact-support-team
     ports:
       - "8000:8000"
     restart: unless-stopped
 
   order-management:
-    image: mahmoudnasser8080/order-management
+    image: mahmoudnasser8080/order-management:metrics-v2
     container_name: order-management
     ports:
       - "9092:9090"

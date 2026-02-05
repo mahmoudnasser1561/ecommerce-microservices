@@ -1,13 +1,13 @@
-FROM node:18-alpine
+FROM node:14
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY package*.json ./
 
-COPY index.js ./
+RUN npm install
 
-ENV NODE_ENV=production
+COPY . .
+
 EXPOSE 3001
 
 CMD ["node", "index.js"]

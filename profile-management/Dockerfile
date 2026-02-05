@@ -1,14 +1,13 @@
-FROM node:18-alpine
+FROM node:14
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+COPY package.json .
 
-COPY auth_api.js ./
+RUN npm install
 
-ENV NODE_ENV=production
-ENV PORT=3003
+COPY . .
 
 EXPOSE 3003
-CMD ["node", "auth_api.js"]
+
+CMD [ "node", "auth_api.js" ]

@@ -1,31 +1,27 @@
-FROM node:20-alpine AS client-build
-WORKDIR /app/client
+FROM node:14
 
-COPY client/package*.json ./
-RUN npm ci --legacy-peer-deps
-
-COPY client ./
-RUN npm run build
-
-
-FROM node:20-alpine AS server-deps
-WORKDIR /app/server
-
-COPY server/package*.json ./
-RUN npm ci --omit=dev
-
-
-FROM node:20-alpine
 WORKDIR /app
 
 COPY server /app/server
 
-COPY --from=server-deps /app/server/node_modules /app/server/node_modules
+WORKDIR /app/server
 
-COPY --from=client-build /app/client/build /app/client/build
+RUN npm install
 
-ENV NODE_ENV=production
-EXPOSE 4000
+
+WORKDIR /app
+
+COPY client /app/client
+
+WORKDIR /app/client
+
+RUN npm install
+
+RUN npm run build
+
 
 WORKDIR /app/server
+
+EXPOSE 4000
+
 CMD ["node", "server.js"]

@@ -7,5 +7,4 @@
 <img width="1366" height="611" alt="image" src="https://github.com/user-attachments/assets/5bb6c56d-35ed-4a09-b68e-f47d431a7c8f" />
 
 # Pofile Management service 
-localhost:4000
-<img width="1365" height="687" alt="image" src="https://github.com/user-attachments/assets/3035e755-76d6-4b4b-9680-c27f38810b3a" />
+<img width="1365" height="664" alt="Screenshot from 2026-02-08 18-36-31" src="https://github.com/user-attachments/assets/6bee260e-162e-4641-9474-109b940c675e" />

@@ -6,6 +6,7 @@
 ## Prometheus Healthy Targets
 <img width="1366" height="611" alt="image" src="https://github.com/user-attachments/assets/5bb6c56d-35ed-4a09-b68e-f47d431a7c8f" />
 
-# Pofile Management service 
+# Profile Management service 
 <img width="1365" height="664" alt="Screenshot from 2026-02-08 18-36-31" src="https://github.com/user-attachments/assets/6bee260e-162e-4641-9474-109b940c675e" />
 <img width="1365" height="551" alt="image" src="https://github.com/user-attachments/assets/e4790452-3697-4533-85a2-ceba4fa372cd" />
+<img width="1365" height="637" alt="Screenshot from 2026-02-08 19-47-07" src="https://github.com/user-attachments/assets/d52f3b40-763c-4b7d-bc1f-4a0e50f41914" />

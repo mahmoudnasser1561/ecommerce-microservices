@@ -16,7 +16,7 @@ This project demonstrates practical microservices orchestration and monitoring a
 
 ## Architecture
 
-![Architecture Diagram](./screenshots/Architecture-diagram.png)
+![Architecture Diagram](./screenshots/ArchitectureDiagram.png)
 
 | Service | Stack | Port |
 |---|---|---|

@@ -1,7 +1,13 @@
+networks:
+  ecommerce-net:
+    external: true
+
 services:
   ecommerce-ui:
     build: ./ecommerce-ui
     container_name: ecommerce-ui
+    networks:
+      - ecommerce-net
     ports:
       - "4000:4000"
     environment:
@@ -22,36 +28,48 @@ services:
   profile-management:
     build: ./profile-management
     container_name: profile-management
+    networks:
+      - ecommerce-net
     ports:
       - "3003:3003"
 
   product-inventory:
     build: ./product-inventory
     container_name: product-inventory
+    networks:
+      - ecommerce-net
     ports:
       - "3002:3002"
 
   shipping-and-handling:
     build: ./shipping-and-handling
     container_name: shipping-and-handling
+    networks:
+      - ecommerce-net
     ports:
       - "8080:8080"
 
   product-catalog:
     build: ./product-catalog
     container_name: product-catalog
+    networks:
+      - ecommerce-net
     ports:
       - "3001:3001"
 
   contact-support-team:
     build: ./contact-support-team
     container_name: contact-support-team
+    networks:
+      - ecommerce-net
     ports:
       - "8000:8000"
 
   order-management:
     build: ./order-management
     container_name: order-management
+    networks:
+      - ecommerce-net
     ports:
       - "9090:9090"
     environment:

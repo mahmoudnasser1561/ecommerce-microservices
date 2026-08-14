@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'contact-support-team'
+    static_configs:
+      - targets: ['contact-support-team:8000']
+
+  - job_name: 'product-catalog'
+    static_configs:
+      - targets: ['product-catalog:3001']
+
+  - job_name: 'product-inventory'
+    static_configs:
+      - targets: ['product-inventory:3002']
+
+  - job_name: 'profile-management'
+    static_configs:
+      - targets: ['profile-management:3003']
+
+  - job_name: 'shipping-and-handling'
+    static_configs:
+      - targets: ['shipping-and-handling:8080']
+
+  - job_name: 'order-management'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['order-management:9090']

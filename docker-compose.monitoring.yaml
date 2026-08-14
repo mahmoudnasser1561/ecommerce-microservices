@@ -1,0 +1,22 @@
+networks:
+  ecommerce-net:
+    external: true
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    container_name: prometheus
+    ports:
+      - "9091:9090"   
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - ecommerce-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - ecommerce-net
